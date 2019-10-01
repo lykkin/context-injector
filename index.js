@@ -5,7 +5,7 @@ const { inject } = require('./injector')
 const INTERNAL_PATTERN = /context-injector(?!\/test)|\/node_modules\//
 const excludePatterns = [INTERNAL_PATTERN]
 
-function wrap(f, lineNum, fileName) {
+function wrap(f, lineNumber, fileName) {
   const scheduledContext = module.exports.context
   if (typeof f !== 'function' || !scheduledContext) {
     return f
@@ -22,16 +22,36 @@ function wrap(f, lineNum, fileName) {
     },
     construct: function constructTrap(Target, proxyArgs) {
       const activeContext = module.exports.context
+      const activeLn = lineNumber
+      const activeFile = fileName
+
       module.exports.context = scheduledContext
+      module.exports.lineNumber = lineNumber
+      module.exports.fileName = fileName
+
       const instance = new Target(...proxyArgs)
+
       module.exports.context = activeContext
+      module.exports.lineNumber = activeLn
+      module.exports.fileName = activeFile
+
       return instance
     },
     apply: function wrappedApply(target, thisArg, args) {
       const activeContext = module.exports.context
+      const activeLn = lineNumber
+      const activeFile = fileName
+
       module.exports.context = scheduledContext
+      module.exports.lineNumber = lineNumber
+      module.exports.fileName = fileName
+
       const res = target.apply(thisArg, args)
+
       module.exports.context = activeContext
+      module.exports.lineNumber = activeLn
+      module.exports.fileName = activeFile
+
       return res
     }
   })
@@ -49,6 +69,8 @@ let patched = false
 
 module.exports = {
   context: null,
+  fileName: null,
+  lineNumber: null,
   registerExcludePattern: (pattern) => {
     excludePatterns.push(pattern)
   },
